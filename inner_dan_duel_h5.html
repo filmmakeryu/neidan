@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>内丹对决</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+            text-align: center;
+        }
+        .rules {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            color: #666;
+            margin-bottom: 20px;
+        }
+        #actionPanel {
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+            margin: 20px auto;
+            max-width: 300px;
+        }
+        .action-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 6px;
+            font-size: 18px;
+            cursor: pointer;
+            transition: all 0.2s;
+            flex: 1;
+        }
+        .gather-btn { background: #4CAF50; color: white; }
+        .attack-btn { background: #f44336; color: white; }
+        .defend-btn { background: #2196F3; color: white; }
+        .action-btn:disabled {
+            background: #ddd !important;
+            cursor: not-allowed;
+        }
+        .status-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-bottom: 20px;
+        }
+        #battleLog {
+            background: white;
+            padding: 15px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+        .gather-text { color: #4CAF50; font-weight: bold; }
+        .attack-text { color: #f44336; font-weight: bold; }
+        .defend-text { color: #2196F3; font-weight: bold; }
+    </style>
+</head>
+<body>
+    <h1>内丹对决</h1>
+    <div class="rules">
+        规则说明：点击"集丹"积累内力 → 使用"攻击"消耗内力（必须有内丹才能攻击） → 当对手集丹时攻击即可获胜！
+    </div>
+
+    <div class="status-panel">
+        <h3>战况</h3>
+        <p>玩家A 内丹：<strong id="danA">0</strong></p>
+        <p>玩家B 内丹：<strong id="danB">0</strong></p>
+        <p>玩家A 胜利次数：<span id="scoreA">0</span></p>
+        <p>玩家B 胜利次数：<span id="scoreB">0</span></p>
+    </div>
+
+    <div id="actionPanel">
+        <button class="action-btn gather-btn" id="gatherBtn">集丹</button>
+        <button class="action-btn attack-btn" id="attackBtn" disabled>攻击</button>
+        <button class="action-btn defend-btn" id="defendBtn">防御</button>
+        <button class="action-btn" id="newGameBtn" style="background: #9C27B0;">新游戏</button>
+        <button class="action-btn" id="shareBtn" style="background: #ff9800;">分享给好友</button>
+    </div>
+
+    <div id="battleLog"></div>
+
+    <script>
+document.addEventListener("DOMContentLoaded", function () {
+    class DanGame {
+        constructor() {
+            this.reset();
+            this.scores = { A: 0, B: 0 };
+        }
+
+        reset() {
+            this.playerA = { dan: 0 };
+            this.playerB = { dan: 0 };
+            this.isGameOver = false;
+        }
+
+        processTurn(playerAction) {
+            if (this.isGameOver) return null;
+
+            const botActions = ['集丹', '防御'];
+            if (this.playerB.dan > 0) botActions.push('攻击');
+            const botAction = botActions[Math.floor(Math.random() * botActions.length)];
+
+            this.processDan(playerAction, botAction);
+            this.logRound(playerAction, botAction);
+
+            const result = this.checkResult(playerAction, botAction);
+            this.handleResult(result);
+
+            return result;
+        }
+
+        processDan(playerAction, botAction) {
+            if (playerAction === '集丹') this.playerA.dan++;
+            if (playerAction === '攻击' && this.playerA.dan > 0) this.playerA.dan--;
+            if (botAction === '集丹') this.playerB.dan++;
+            if (botAction === '攻击' && this.playerB.dan > 0) this.playerB.dan--;
+        }
+
+        checkResult(playerAction, botAction) {
+            if (playerAction === '攻击' && botAction === '集丹') return 'A';
+            if (botAction === '攻击' && playerAction === '集丹') return 'B';
+            return null;
+        }
+
+        handleResult(result) {
+            if (result) {
+                this.scores[result]++;
+                this.isGameOver = true;
+            }
+        }
+
+        logRound(playerAction, botAction) {
+            const actionClass = {
+                "集丹": "gather-text",
+                "攻击": "attack-text",
+                "防御": "defend-text"
+            };
+
+            const logEntry = document.createElement("div");
+            logEntry.innerHTML = `<strong>玩家A：</strong> <span class="${actionClass[playerAction]}">${playerAction}</span> | 
+                                  <strong>玩家B：</strong> <span class="${actionClass[botAction]}">${botAction}</span>`;
+            document.getElementById("battleLog").prepend(logEntry);
+        }
+    }
+
+    let game = new DanGame();
+
+    document.getElementById('gatherBtn').addEventListener('click', () => playTurn('集丹'));
+    document.getElementById('attackBtn').addEventListener('click', () => playTurn('攻击'));
+    document.getElementById('defendBtn').addEventListener('click', () => playTurn('防御'));
+    document.getElementById('newGameBtn').addEventListener('click', newGame);
+    document.getElementById('shareBtn').addEventListener('click', shareGame);
+
+    function playTurn(action) {
+        if (game.isGameOver) return;
+        const result = game.processTurn(action);
+        updateUI();
+
+        if (result) {
+            setTimeout(() => {
+                alert(`玩家 ${result} 获胜！`);
+                newGame();
+            }, 50);
+        }
+    }
+
+    function newGame() {
+        game.reset();
+        document.getElementById('battleLog').innerHTML = '';
+        updateUI();
+    }
+
+    function updateUI() {
+        document.getElementById('danA').textContent = game.playerA.dan;
+        document.getElementById('danB').textContent = game.playerB.dan;
+        document.getElementById('scoreA').textContent = game.scores.A;
+        document.getElementById('scoreB').textContent = game.scores.B;
+        document.getElementById('attackBtn').disabled = game.playerA.dan < 1;
+    }
+
+    function shareGame() {
+        alert("请点击微信右上角的分享按钮，将游戏分享给好友！");
+    }
+
+    updateUI();
+});
+</script>
+</body>
+</html>
