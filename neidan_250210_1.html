@@ -1,0 +1,235 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+    <title>内丹对决</title>
+    <style>
+        :root {
+            --victory-color: #4CAF50;
+            --defeat-color: #f44336;
+        }
+        body {
+            font-family: Arial, sans-serif;
+            max-width: 100%;
+            margin: 0 auto;
+            padding: 20px;
+            background: #f0f2f5;
+            text-align: center;
+        }
+        .status-panel {
+            background: white;
+            padding: 15px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 15px 0;
+            display: flex;
+            justify-content: space-between;
+        }
+        .battle-log {
+            background: white;
+            padding: 20px;
+            border-radius: 10px;
+            box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+            margin: 15px 0;
+            min-height: 100px;
+            position: relative;
+            overflow: hidden;
+        }
+        .result-overlay {
+            position: absolute;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 2em;
+            animation: fadeOut 1.5s forwards;
+        }
+        @keyframes fadeOut {
+            0% { opacity: 1; transform: scale(1); }
+            100% { opacity: 0; transform: scale(2); }
+        }
+        .victory { color: var(--victory-color); }
+        .defeat { color: var(--defeat-color); }
+        .action-display {
+            display: grid;
+            grid-template-columns: 1fr auto 1fr;
+            gap: 15px;
+            font-size: 1.2em;
+            margin: 10px 0;
+        }
+        .round-number {
+            color: #666;
+            font-size: 0.9em;
+        }
+        #actionPanel {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin: 20px 0;
+        }
+        .action-btn {
+            padding: 15px;
+            border: none;
+            border-radius: 8px;
+            font-size: 16px;
+            cursor: pointer;
+            transition: transform 0.1s;
+        }
+        .action-btn:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+<body>
+    <h1>内丹对决</h1>
+    
+    <div class="status-panel">
+        <div>
+            <div>碳基人</div>
+            <div>内丹：<strong id="danA">0</strong></div>
+            <div>胜利：<span id="scoreA">0</span></div>
+        </div>
+        <div>
+            <div>硅基人</div>
+            <div>内丹：<strong id="danB">0</strong></div>
+            <div>胜利：<span id="scoreB">0</span></div>
+        </div>
+    </div>
+
+    <div class="battle-log" id="battleLog">
+        <div class="action-display" id="currentAction">
+            <span id="playerAction">-</span>
+            <div>VS</div>
+            <span id="botAction">-</span>
+        </div>
+        <div class="round-number" id="roundNumber">第 0 回合</div>
+    </div>
+
+    <div id="actionPanel">
+        <button class="action-btn" style="background: #4CAF50;" id="gatherBtn">集丹</button>
+        <button class="action-btn" style="background: #f44336;" id="attackBtn" disabled>攻击</button>
+        <button class="action-btn" style="background: #2196F3;" id="defendBtn">防御</button>
+    </div>
+
+    <button class="action-btn" style="background: #9C27B5; width: 100%;" id="newGameBtn">全新开始</button>
+
+    <script>
+class DanDuel {
+    constructor() {
+        this.scores = JSON.parse(localStorage.getItem('danScores')) || { A: 0, B: 0 };
+        this.reset();
+    }
+
+    reset() {
+        this.playerA = { dan: 0 };
+        this.playerB = { dan: 0 };
+        this.round = 1;
+        this.updateDisplay();
+    }
+
+    getBotAction() {
+        // 智能AI决策逻辑
+        if (this.playerB.dan === 0) return '集丹';
+        if (this.playerA.dan === 0) return Math.random() < 0.8 ? '集丹' : '防御';
+        
+        return ['集丹', '防御', '攻击'][Math.floor(Math.random() * 3)];
+    }
+
+    processTurn(playerAction) {
+        // 验证玩家动作
+        if (playerAction === '攻击' && this.playerA.dan < 1) {
+            playerAction = '防御';
+        }
+
+        // AI行动
+        const botAction = this.getBotAction();
+
+        // 更新状态
+        this.updateDan(playerAction, botAction);
+        this.showActions(playerAction, botAction);
+
+        // 检查结果
+        const result = this.checkResult(playerAction, botAction);
+        if (result) this.handleResult(result);
+
+        this.round++;
+        this.updateDisplay();
+    }
+
+    updateDan(playerAction, botAction) {
+        // 处理内丹变化
+        const actions = {
+            '集丹': player => player.dan++,
+            '攻击': player => player.dan > 0 ? player.dan-- : null,
+            '防御': () => {}
+        };
+
+        actions[playerAction](this.playerA);
+        actions[botAction](this.playerB);
+    }
+
+    checkResult(playerAction, botAction) {
+        if (playerAction === '攻击' && botAction === '集丹') return 'A';
+        if (botAction === '攻击' && playerAction === '集丹') return 'B';
+        return null;
+    }
+
+    handleResult(winner) {
+        this.scores[winner]++;
+        localStorage.setItem('danScores', JSON.stringify(this.scores));
+        this.showResultAnimation(winner);
+        setTimeout(() => this.reset(), 1500);
+    }
+
+    showActions(playerAction, botAction) {
+        const actionColors = {
+            '集丹': '#4CAF50',
+            '攻击': '#f44336',
+            '防御': '#2196F3'
+        };
+
+        document.getElementById('playerAction').style.color = actionColors[playerAction];
+        document.getElementById('playerAction').textContent = playerAction;
+        document.getElementById('botAction').style.color = actionColors[botAction];
+        document.getElementById('botAction').textContent = botAction;
+        document.getElementById('roundNumber').textContent = `第 ${this.round} 回合`;
+    }
+
+    showResultAnimation(result) {
+        const log = document.getElementById('battleLog');
+        const overlay = document.createElement('div');
+        overlay.className = `result-overlay ${result === 'A' ? 'victory' : 'defeat'}`;
+        overlay.textContent = result === 'A' ? '🎉 胜利!' : '💥 败北!';
+        
+        log.appendChild(overlay);
+        setTimeout(() => overlay.remove(), 1500);
+    }
+
+    updateDisplay() {
+        document.getElementById('danA').textContent = this.playerA.dan;
+        document.getElementById('danB').textContent = this.playerB.dan;
+        document.getElementById('scoreA').textContent = this.scores.A;
+        document.getElementById('scoreB').textContent = this.scores.B;
+        document.getElementById('attackBtn').disabled = this.playerA.dan < 1;
+    }
+}
+
+// 初始化游戏
+const game = new DanDuel();
+
+// 事件绑定
+document.getElementById('gatherBtn').addEventListener('click', () => game.processTurn('集丹'));
+document.getElementById('attackBtn').addEventListener('click', () => game.processTurn('攻击'));
+document.getElementById('defendBtn').addEventListener('click', () => game.processTurn('防御'));
+document.getElementById('newGameBtn').addEventListener('click', () => {
+    game.scores = { A: 0, B: 0 };
+    localStorage.removeItem('danScores');
+    game.reset();
+});
+    </script>
+</body>
+</html>
