@@ -22,10 +22,11 @@
             text-align: center;
             margin-bottom: 15px;
         }
-        .round-number {
+        .rule-tip {
             color: #666;
-            font-size: 14px;
-            margin: 10px 0;
+            font-size: 12px;
+            margin: 5px 0 15px;
+            text-align: center;
         }
         .status-panel {
             display: grid;
@@ -70,14 +71,20 @@
         .gather-btn { background: var(--gather-color); color: white; }
         .attack-btn { background: var(--attack-color); color: white; }
         .defend-btn { background: var(--defend-color); color: white; }
-        .latest-action {
+        .action-display {
             background: white;
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-            margin-top: 15px;
+            margin: 15px 0;
+            text-align: center;
         }
-        .action-display {
+        .round-info {
+            color: #666;
+            font-size: 14px;
+            margin-bottom: 8px;
+        }
+        .action-text {
             display: flex;
             justify-content: space-between;
             font-size: 18px;
@@ -88,7 +95,7 @@
 <body>
     <div class="header">
         <h1>内丹对决</h1>
-        <div class="round-number" id="roundNumber">第 1 回合</div>
+        <div class="rule-tip">策略：集丹积累内力 → 攻击消耗内力 → 当对手集丹时攻击即可获胜！</div>
     </div>
 
     <div class="status-panel">
@@ -110,10 +117,10 @@
         </div>
     </div>
 
-    <div class="latest-action">
-        <div class="action-display">
+    <div class="action-display">
+        <div class="round-info" id="roundNumber">第 1 回合</div>
+        <div class="action-text">
             <span style="color: var(--carbon-color)" id="playerAction">-</span>
-            <span style="color: #666">VS</span>
             <span style="color: var(--silicon-color)" id="botAction">-</span>
         </div>
     </div>
@@ -146,10 +153,29 @@ class DanDuel {
         const playerDan = this.playerA.dan;
         
         // 强化攻击逻辑
-        if (botDan >= 3) return '攻击';
-        if (botDan > 0 && playerDan > 2) return '攻击';
-        if (botDan === 0) return '集丹';
-        return Math.random() < 0.6 ? '集丹' : '防御';
+        if (playerDan === 0 && botDan > 0) {
+            return this.weightedChoice({ '攻击': 90, '集丹': 10 }); // 对手无丹时90%攻击
+        }
+        if (playerDan === 1 && botDan > 0) {
+            return this.weightedChoice({ '攻击': 70, '防御': 30 });
+        }
+        if (botDan >= 3) {
+            return this.weightedChoice({ '攻击': 80, '集丹': 20 });
+        }
+        if (botDan === 0) {
+            return this.weightedChoice({ '集丹': 95, '防御': 5 });
+        }
+        return this.weightedChoice({ '攻击': 60, '集丹': 30, '防御': 10 });
+    }
+
+    weightedChoice(weights) {
+        const total = Object.values(weights).reduce((a, b) => a + b, 0);
+        let random = Math.random() * total;
+        for (const [action, weight] of Object.entries(weights)) {
+            if (random < weight) return action;
+            random -= weight;
+        }
+        return Object.keys(weights)[0];
     }
 
     processTurn(playerAction) {
@@ -160,7 +186,7 @@ class DanDuel {
         const botAction = this.getBotAction();
         this.processActions(playerAction, botAction);
         this.showLatestAction(playerAction, botAction);
-        
+
         const result = this.checkResult(playerAction, botAction);
         if (result) this.handleResult(result);
 
@@ -188,24 +214,21 @@ class DanDuel {
         this.scores[winner]++;
         localStorage.setItem('danScores', JSON.stringify(this.scores));
         setTimeout(() => {
-            alert(`${winner === 'A' ? '碳基人' : '硅基人'}获胜！`);
-            this.reset();
+            alert(`${winner === 'A' ? '碳基人' : '硅基人'}获胜！`);            this.reset();
         }, 100);
     }
 
     showLatestAction(playerAction, botAction) {
-        const getColor = (action) => {
-            return {
-                '集丹': 'var(--gather-color)',
-                '攻击': 'var(--attack-color)',
-                '防御': 'var(--defend-color)'
-            }[action];
+        const actionColors = {
+            '集丹': 'var(--gather-color)',
+            '攻击': 'var(--attack-color)',
+            '防御': 'var(--defend-color)'
         };
 
         document.getElementById('playerAction').textContent = playerAction;
-        document.getElementById('playerAction').style.color = getColor(playerAction);
+        document.getElementById('playerAction').style.color = actionColors[playerAction];
         document.getElementById('botAction').textContent = botAction;
-        document.getElementById('botAction').style.color = getColor(botAction);
+        document.getElementById('botAction').style.color = actionColors[botAction];
     }
 
     clearActions() {
@@ -214,28 +237,42 @@ class DanDuel {
     }
 
     updateDisplay() {
+        // 更新数字显示
         document.getElementById('danA').textContent = this.playerA.dan;
         document.getElementById('danB').textContent = this.playerB.dan;
+        
+        // 更新比分
         document.getElementById('scoreA').textContent = this.scores.A;
         document.getElementById('scoreB').textContent = this.scores.B;
+        
+        // 更新回合数
         document.getElementById('roundNumber').textContent = `第 ${this.round} 回合`;
+        
+        // 控制攻击按钮状态
         document.getElementById('attackBtn').disabled = this.playerA.dan < 1;
     }
 }
 
+// 初始化游戏实例
 const game = new DanDuel();
 
 // 事件绑定
 document.getElementById('gatherBtn').addEventListener('click', () => game.processTurn('集丹'));
 document.getElementById('attackBtn').addEventListener('click', () => game.processTurn('攻击'));
 document.getElementById('defendBtn').addEventListener('click', () => game.processTurn('防御'));
+
+// 全新开始按钮
 document.getElementById('newGameBtn').addEventListener('click', () => {
     if (confirm('确定要重置所有比分吗？')) {
-        game.scores = { A: 0, B: 0 };
+        // 重置分数存储
         localStorage.removeItem('danScores');
+        // 创建新游戏实例
+        game.scores = { A: 0, B: 0 };
         game.reset();
+        // 更新显示
+        game.updateDisplay();
     }
 });
-    </script>
-</body>
-</html>
+
+// 初始显示
+game.updateDisplay();
