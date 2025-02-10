@@ -6,10 +6,11 @@
     <title>内丹对决</title>
     <style>
         :root {
-            --carbon-color: #FF5722;  /* 碳基人橙红 */
-            --silicon-color: #2196F3;  /* 硅基人湛蓝 */
-            --gather-color: #4CAF50;   /* 集丹绿色 */
-            --attack-color: #E91E63;   /* 攻击品红 */
+            --carbon-color: #FF5722;
+            --silicon-color: #2196F3;
+            --gather-color: #4CAF50;
+            --attack-color: #E91E63;
+            --defend-color: #9C27B0;
         }
         body {
             font-family: -apple-system, sans-serif;
@@ -17,11 +18,14 @@
             padding: 15px;
             background: #f5f5f5;
         }
-        .rule-tip {
-            color: #666;
-            font-size: 12px;
+        .header {
             text-align: center;
-            margin: 5px 0 15px;
+            margin-bottom: 15px;
+        }
+        .round-number {
+            color: #666;
+            font-size: 14px;
+            margin: 10px 0;
         }
         .status-panel {
             display: grid;
@@ -37,14 +41,17 @@
         }
         .carbon .title { color: var(--carbon-color); }
         .silicon .title { color: var(--silicon-color); }
-        .dan-count {
-            font-size: 24px;
-            font-weight: bold;
+        .dan-info {
             margin: 10px 0;
         }
         .dan-label {
             color: #888;
             font-size: 14px;
+        }
+        .dan-count {
+            font-size: 24px;
+            font-weight: bold;
+            margin-top: 5px;
         }
         #actionPanel {
             display: grid;
@@ -62,47 +69,52 @@
         }
         .gather-btn { background: var(--gather-color); color: white; }
         .attack-btn { background: var(--attack-color); color: white; }
-        .defend-btn { background: #9C27B0; color: white; }  /* 防御紫色 */
-        .round-log {
+        .defend-btn { background: var(--defend-color); color: white; }
+        .latest-action {
             background: white;
             padding: 15px;
             border-radius: 12px;
             box-shadow: 0 2px 8px rgba(0,0,0,0.1);
             margin-top: 15px;
         }
-        .log-item {
+        .action-display {
             display: flex;
             justify-content: space-between;
-            padding: 8px 0;
-            border-bottom: 1px solid #eee;
-        }
-        @media (max-width: 480px) {
-            .action-btn {
-                padding: 15px 8px;
-                font-size: 14px;
-            }
-            .dan-count {
-                font-size: 20px;
-            }
+            font-size: 18px;
+            margin: 10px 0;
         }
     </style>
 </head>
 <body>
-    <h1 style="text-align: center;">内丹对决</h1>
-    <div class="rule-tip">集丹积累内力 → 有丹才能攻击 → 攻击正在集丹的对手获胜！</div>
+    <div class="header">
+        <h1>内丹对决</h1>
+        <div class="round-number" id="roundNumber">第 1 回合</div>
+    </div>
 
     <div class="status-panel">
         <div class="player-card carbon">
             <div class="title">碳基人</div>
-            <div class="dan-label">内丹数量</div>
-            <div class="dan-count" id="danA">0</div>
+            <div class="dan-info">
+                <div class="dan-label">内丹数量</div>
+                <div class="dan-count" id="danA">0</div>
+            </div>
             <div class="dan-label">胜利次数：<span id="scoreA">0</span></div>
         </div>
         <div class="player-card silicon">
             <div class="title">硅基人</div>
-            <div class="dan-label">内丹数量</div>
-            <div class="dan-count" id="danB">0</div>
+            <div class="dan-info">
+                <div class="dan-label">内丹数量</div>
+                <div class="dan-count" id="danB">0</div>
+            </div>
             <div class="dan-label">胜利次数：<span id="scoreB">0</span></div>
+        </div>
+    </div>
+
+    <div class="latest-action">
+        <div class="action-display">
+            <span style="color: var(--carbon-color)" id="playerAction">-</span>
+            <span style="color: #666">VS</span>
+            <span style="color: var(--silicon-color)" id="botAction">-</span>
         </div>
     </div>
 
@@ -112,15 +124,7 @@
         <button class="action-btn defend-btn" id="defendBtn">防御</button>
     </div>
 
-    <div class="round-log">
-        <div class="log-item">
-            <span style="color: var(--carbon-color)">碳基人动作</span>
-            <span style="color: var(--silicon-color)">硅基人动作</span>
-        </div>
-        <div id="actionLog"></div>
-    </div>
-
-    <button class="action-btn" style="background: #607D8B; width: 100%; margin-top:15px;" id="newGameBtn">全新开始</button>
+    <button class="action-btn" style="background: #607D8B; width: 100%;" id="newGameBtn">全新开始</button>
 
     <script>
 class DanDuel {
@@ -133,8 +137,8 @@ class DanDuel {
         this.playerA = { dan: 0 };
         this.playerB = { dan: 0 };
         this.round = 1;
+        this.clearActions();
         this.updateDisplay();
-        this.clearActionLog();
     }
 
     getBotAction() {
@@ -142,10 +146,8 @@ class DanDuel {
         const playerDan = this.playerA.dan;
         
         // 强化攻击逻辑
-        if (botDan > 3) return '攻击';  // 内丹超过3个时70%概率攻击
-        if (botDan > 1 && playerDan > 0) {
-            return Math.random() < 0.7 ? '攻击' : '集丹';
-        }
+        if (botDan >= 3) return '攻击';
+        if (botDan > 0 && playerDan > 2) return '攻击';
         if (botDan === 0) return '集丹';
         return Math.random() < 0.6 ? '集丹' : '防御';
     }
@@ -157,8 +159,8 @@ class DanDuel {
 
         const botAction = this.getBotAction();
         this.processActions(playerAction, botAction);
-        this.logAction(playerAction, botAction);
-
+        this.showLatestAction(playerAction, botAction);
+        
         const result = this.checkResult(playerAction, botAction);
         if (result) this.handleResult(result);
 
@@ -191,23 +193,24 @@ class DanDuel {
         }, 100);
     }
 
-    logAction(playerAction, botAction) {
-        const logEntry = document.createElement('div');
-        logEntry.className = 'log-item';
-        logEntry.innerHTML = `
-            <span style="color: ${playerAction === '攻击' ? 'var(--attack-color)' : 'var(--gather-color)'}">${playerAction}</span>
-            <span style="color: ${botAction === '攻击' ? 'var(--attack-color)' : 'var(--gather-color)'}">${botAction}</span>
-        `;
-        document.getElementById('actionLog').prepend(logEntry);
-        
-        // 保持最多5条记录
-        if (document.getElementById('actionLog').children.length > 5) {
-            document.getElementById('actionLog').lastChild.remove();
-        }
+    showLatestAction(playerAction, botAction) {
+        const getColor = (action) => {
+            return {
+                '集丹': 'var(--gather-color)',
+                '攻击': 'var(--attack-color)',
+                '防御': 'var(--defend-color)'
+            }[action];
+        };
+
+        document.getElementById('playerAction').textContent = playerAction;
+        document.getElementById('playerAction').style.color = getColor(playerAction);
+        document.getElementById('botAction').textContent = botAction;
+        document.getElementById('botAction').style.color = getColor(botAction);
     }
 
-    clearActionLog() {
-        document.getElementById('actionLog').innerHTML = '';
+    clearActions() {
+        document.getElementById('playerAction').textContent = '-';
+        document.getElementById('botAction').textContent = '-';
     }
 
     updateDisplay() {
@@ -215,6 +218,7 @@ class DanDuel {
         document.getElementById('danB').textContent = this.playerB.dan;
         document.getElementById('scoreA').textContent = this.scores.A;
         document.getElementById('scoreB').textContent = this.scores.B;
+        document.getElementById('roundNumber').textContent = `第 ${this.round} 回合`;
         document.getElementById('attackBtn').disabled = this.playerA.dan < 1;
     }
 }
