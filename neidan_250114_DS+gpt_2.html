@@ -154,7 +154,7 @@
       &nbsp;&nbsp;&bull; 集丹：获得1颗内丹<br>
       &nbsp;&nbsp;&bull; 攻击：消耗1颗内丹发动攻击（无内丹则无法攻击，会自动变为防御）<br>
       &nbsp;&nbsp;&bull; 防御：可抵消对手攻击<br>
-      2. 当你“集丹”时若对方发动“攻击”，你将被击败；双方同时攻击或攻击遇防均视为抵消。<br>
+      2. 当你“集丹”时若对手发动“攻击”，你将被击败；双方同时攻击或攻击遇防均视为抵消。<br>
       一方被击败后，自动开启下一局，并统计累计胜场。
     </div>
   </div>
@@ -195,7 +195,7 @@
   <button class="action-btn" id="newGameBtn">全新开始（重置胜场）</button>
 
   <script>
-    // 保存actionDisplay原始结构模板
+    // 保存 actionDisplay 原始结构模板
     const actionDisplayTemplate = `
       <div class="round-info" id="roundNumber">第 1 回合</div>
       <div class="action-text">
@@ -218,20 +218,21 @@
         this.updateDisplay();
       }
 
-      // AI决策逻辑：仅基于当前内丹状态和少量随机性
+      // AI 决策仅基于当前双方内丹状态和随机噪音
       getAIDecision() {
-        if (this.ai.dan < 1) {
-          return '集丹';
-        }
-        // 如果对手没丹，AI更倾向于攻击
-        if (this.player.dan === 0) {
-          return Math.random() < 0.7 ? '攻击' : '集丹';
-        }
-        // 当双方都有丹时，根据AI当前丹数作出决策
+        if (this.ai.dan < 1) return '集丹';
+
+        // 定义基础权重
+        let weights = { '攻击': 40, '集丹': 40, '防御': 20 };
         if (this.ai.dan >= 3) {
-          return this.weightedChoice({ '攻击': 50, '集丹': 30, '防御': 20 });
+          weights = { '攻击': 50, '集丹': 30, '防御': 20 };
         }
-        return this.weightedChoice({ '攻击': 40, '集丹': 40, '防御': 20 });
+        // 加入随机噪音，避免太死板
+        for (let key in weights) {
+          weights[key] += Math.floor(Math.random() * 11) - 5; // -5 到 +5 的随机数
+          if (weights[key] < 0) weights[key] = 0;
+        }
+        return this.weightedChoice(weights);
       }
 
       weightedChoice(choices) {
@@ -253,7 +254,7 @@
 
         this.showLatestAction(playerAction, aiAction);
 
-        // 双方操作：集丹时加1，攻击时消耗1（若有足够内丹）
+        // 双方操作：集丹时加1，攻击时消耗1（若有内丹）
         const process = (entity, action) => {
           if (action === '集丹') entity.dan++;
           if (action === '攻击' && entity.dan > 0) entity.dan--;
@@ -285,16 +286,13 @@
           this.scores.ai++;
         }
         localStorage.setItem('innerDanScores', JSON.stringify(this.scores));
-
         const actionDisplay = document.getElementById('actionDisplay');
         actionDisplay.style.background = winner === 'player' ? 'rgba(255, 87, 34, 0.3)' : 'rgba(33, 150, 243, 0.3)';
         actionDisplay.style.transform = 'scale(1.05)';
-
         setTimeout(() => {
           const winnerText = winner === 'player' ? '碳基生命获胜！' : '硅基智能获胜！';
           actionDisplay.innerHTML = `<div style="font-size:20px;font-weight:bold;color:${winner === 'player' ? 'var(--carbon-color)' : 'var(--silicon-color)'}">${winnerText}</div>`;
           setTimeout(() => {
-            // 自动开始下一局
             this.resetRound();
           }, 1000);
         }, 300);
