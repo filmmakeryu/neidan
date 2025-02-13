@@ -154,7 +154,7 @@
       &nbsp;&nbsp;&bull; 集丹：+1内丹<br>
       &nbsp;&nbsp;&bull; 攻击：消耗1内丹；若对手选择【集丹】、【回血】或【强攻】，则对方受1点伤害（双方同时攻击则抵消）<br>
       &nbsp;&nbsp;&bull; 防御：抵消对手【攻击】（无法防御【强攻】）<br>
-      &nbsp;&nbsp;&bull; 强攻：消耗3内丹，无视对方攻击或防御，若对手【集丹】则造成2点伤害，其它情况造成1点伤害；若双方均选【强攻】则互抵<br>
+      &nbsp;&nbsp;&bull; 强攻：消耗3内丹，无视对方攻击或防御；若对手【集丹】则造成2点伤害，其它情况造成1点伤害；若双方均选【强攻】则互抵<br>
       &nbsp;&nbsp;&bull; 回血：消耗3内丹，回合结束后恢复1点血<br>
       3. 一方血量降至 0 或以下即判负，自动开始下一局，并累计胜场
     </div>
@@ -318,21 +318,21 @@
         updateDan(this.player, playerAction);
         updateDan(this.ai, aiAction);
 
-        // 计算伤害：更新 calcDamage 逻辑
+        // 计算伤害：修正强攻对攻击时只有强攻造成伤害
         const calcDamage = (attackerAction, defenderAction) => {
           let dmg = 0;
           if(attackerAction === '攻击'){
-            // 普通攻击：如果对手未采用攻击或防御，则造成1点伤害
-            if(defenderAction !== '攻击' && defenderAction !== '防御'){
+            // 普通攻击仅对对手未采取攻击、防御或强攻时造成1伤害
+            if(defenderAction !== '攻击' && defenderAction !== '防御' && defenderAction !== '强攻'){
               dmg = 1;
             }
           } else if(attackerAction === '强攻'){
-            // 如果对手也用强攻则互抵
             if(defenderAction === '强攻'){
               dmg = 0;
             } else if(defenderAction === '集丹'){
               dmg = 2;
             } else {
+              // 当对手采取攻击、回血等，只有强攻造成伤害，而对手的攻击不产生反作用
               dmg = 1;
             }
           }
