@@ -221,8 +221,8 @@
         this.updateDisplay();
       }
 
+      // 改进后的 AI 决策：若玩家上回合为“攻击”，则不再选择“集丹”
       getAIDecision() {
-        // 如果AI没有内丹，则只能集丹
         if (this.ai.dan < 1) {
           return '集丹';
         }
@@ -230,13 +230,14 @@
         const aiDan = this.ai.dan;
         const lastPlayer = this.lastPlayerAction;
         
-        if(lastPlayer === '集丹'){
+        if (lastPlayer === '集丹') {
           return this.weightedChoice({ '攻击': 80, '集丹': 10, '防御': 10 });
         }
-        if(lastPlayer === '攻击'){
-          return this.weightedChoice({ '集丹': 70, '防御': 20, '攻击': 10 });
+        if (lastPlayer === '攻击') {
+          // 修改这里：避免选择“集丹”，从而防止玩家重复集丹攻击获胜
+          return this.weightedChoice({ '防御': 70, '攻击': 30 });
         }
-        if(lastPlayer === '防御'){
+        if (lastPlayer === '防御') {
           return this.weightedChoice({ '集丹': 80, '攻击': 10, '防御': 10 });
         }
         if (this.player.dan === 0) {
@@ -263,14 +264,14 @@
         if (playerAction === '攻击' && this.player.dan < 1) {
           playerAction = '防御';
         }
-        // 更新玩家的最后操作，使用修正后的动作
+        // 更新玩家的最后操作（用修正后的动作记录）
         this.lastPlayerAction = playerAction;
 
         const aiAction = this.getAIDecision();
 
         this.showLatestAction(playerAction, aiAction);
 
-        // 双方操作处理：集丹加1，攻击消耗1（若有足够内丹）
+        // 处理双方操作：集丹加1，攻击消耗1（若有足够内丹）
         const process = (entity, action) => {
           if (action === '集丹') entity.dan++;
           if (action === '攻击' && entity.dan > 0) entity.dan--;
@@ -278,7 +279,7 @@
         process(this.player, playerAction);
         process(this.ai, aiAction);
 
-        // 检查胜负：仅当一方在集丹时遭遇对方攻击时判定失败
+        // 胜负判断：只有当一方在集丹时遭遇对方攻击，则判定失败
         const result = this.checkResult(playerAction, aiAction);
         if (result) {
           this.handleResult(result);
