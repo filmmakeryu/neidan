@@ -207,7 +207,6 @@
     class InnerDanDuel {
       constructor() {
         this.scores = JSON.parse(localStorage.getItem('innerDanScores')) || { player: 0, ai: 0 };
-        this.lastPlayerAction = ''; // 记录上回合玩家的操作
         this.resetRound();
       }
 
@@ -215,38 +214,24 @@
         this.player = { dan: 0 };
         this.ai = { dan: 0 };
         this.round = 1;
-        this.lastPlayerAction = '';
-        // 恢复actionDisplay原始结构
         document.getElementById('actionDisplay').innerHTML = actionDisplayTemplate;
         this.updateDisplay();
       }
 
-      // 改进后的 AI 决策：若玩家上回合为“攻击”，则不再选择“集丹”
+      // AI决策逻辑：仅基于当前内丹状态和少量随机性
       getAIDecision() {
         if (this.ai.dan < 1) {
           return '集丹';
         }
-        const playerDan = this.player.dan;
-        const aiDan = this.ai.dan;
-        const lastPlayer = this.lastPlayerAction;
-        
-        if (lastPlayer === '集丹') {
-          return this.weightedChoice({ '攻击': 80, '集丹': 10, '防御': 10 });
-        }
-        if (lastPlayer === '攻击') {
-          // 修改这里：避免选择“集丹”，从而防止玩家重复集丹攻击获胜
-          return this.weightedChoice({ '防御': 70, '攻击': 30 });
-        }
-        if (lastPlayer === '防御') {
-          return this.weightedChoice({ '集丹': 80, '攻击': 10, '防御': 10 });
-        }
+        // 如果对手没丹，AI更倾向于攻击
         if (this.player.dan === 0) {
-          return this.weightedChoice({ '攻击': 80, '集丹': 20 });
+          return Math.random() < 0.7 ? '攻击' : '集丹';
         }
-        if (aiDan >= 3) {
-          return this.weightedChoice({ '攻击': 70, '集丹': 20, '防御': 10 });
+        // 当双方都有丹时，根据AI当前丹数作出决策
+        if (this.ai.dan >= 3) {
+          return this.weightedChoice({ '攻击': 50, '集丹': 30, '防御': 20 });
         }
-        return this.weightedChoice({ '攻击': 50, '集丹': 40, '防御': 10 });
+        return this.weightedChoice({ '攻击': 40, '集丹': 40, '防御': 20 });
       }
 
       weightedChoice(choices) {
@@ -264,14 +249,11 @@
         if (playerAction === '攻击' && this.player.dan < 1) {
           playerAction = '防御';
         }
-        // 更新玩家的最后操作（用修正后的动作记录）
-        this.lastPlayerAction = playerAction;
-
         const aiAction = this.getAIDecision();
 
         this.showLatestAction(playerAction, aiAction);
 
-        // 处理双方操作：集丹加1，攻击消耗1（若有足够内丹）
+        // 双方操作：集丹时加1，攻击时消耗1（若有足够内丹）
         const process = (entity, action) => {
           if (action === '集丹') entity.dan++;
           if (action === '攻击' && entity.dan > 0) entity.dan--;
@@ -279,7 +261,7 @@
         process(this.player, playerAction);
         process(this.ai, aiAction);
 
-        // 胜负判断：只有当一方在集丹时遭遇对方攻击，则判定失败
+        // 胜负判断：仅当一方在集丹时遭遇攻击时判定失败
         const result = this.checkResult(playerAction, aiAction);
         if (result) {
           this.handleResult(result);
@@ -303,11 +285,11 @@
           this.scores.ai++;
         }
         localStorage.setItem('innerDanScores', JSON.stringify(this.scores));
-        
+
         const actionDisplay = document.getElementById('actionDisplay');
         actionDisplay.style.background = winner === 'player' ? 'rgba(255, 87, 34, 0.3)' : 'rgba(33, 150, 243, 0.3)';
         actionDisplay.style.transform = 'scale(1.05)';
-        
+
         setTimeout(() => {
           const winnerText = winner === 'player' ? '碳基生命获胜！' : '硅基智能获胜！';
           actionDisplay.innerHTML = `<div style="font-size:20px;font-weight:bold;color:${winner === 'player' ? 'var(--carbon-color)' : 'var(--silicon-color)'}">${winnerText}</div>`;
@@ -350,8 +332,8 @@
         this.appendChild(ripple);
         const rect = this.getBoundingClientRect();
         ripple.style.width = ripple.style.height = Math.max(rect.width, rect.height) + 'px';
-        ripple.style.left = (e.clientX - rect.left - rect.width/2) + 'px';
-        ripple.style.top = (e.clientY - rect.top - rect.height/2) + 'px';
+        ripple.style.left = (e.clientX - rect.left - rect.width / 2) + 'px';
+        ripple.style.top = (e.clientY - rect.top - rect.height / 2) + 'px';
         setTimeout(() => { ripple.remove(); }, 600);
       });
     });
