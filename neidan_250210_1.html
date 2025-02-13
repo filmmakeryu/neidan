@@ -133,146 +133,159 @@
 
     <button class="action-btn" style="background: #607D8B; width: 100%;" id="newGameBtn">全新开始</button>
 
-    <script>
-class DanDuel {
-    constructor() {
-        this.scores = JSON.parse(localStorage.getItem('danScores')) || { A: 0, B: 0 };
-        this.reset();
-    }
-
-    reset() {
-        this.playerA = { dan: 0 };
-        this.playerB = { dan: 0 };
-        this.round = 1;
-        this.clearActions();
-        this.updateDisplay();
-    }
-
-    getBotAction() {
-        const botDan = this.playerB.dan;
-        const playerDan = this.playerA.dan;
-        
-        // 强化攻击逻辑
-        if (playerDan === 0 && botDan > 0) {
-            return this.weightedChoice({ '攻击': 90, '集丹': 10 }); // 对手无丹时90%攻击
-        }
-        if (playerDan === 1 && botDan > 0) {
-            return this.weightedChoice({ '攻击': 70, '防御': 30 });
-        }
-        if (botDan >= 3) {
-            return this.weightedChoice({ '攻击': 80, '集丹': 20 });
-        }
-        if (botDan === 0) {
-            return this.weightedChoice({ '集丹': 95, '防御': 5 });
-        }
-        return this.weightedChoice({ '攻击': 60, '集丹': 30, '防御': 10 });
-    }
-
-    weightedChoice(weights) {
-        const total = Object.values(weights).reduce((a, b) => a + b, 0);
-        let random = Math.random() * total;
-        for (const [action, weight] of Object.entries(weights)) {
-            if (random < weight) return action;
-            random -= weight;
-        }
-        return Object.keys(weights)[0];
-    }
-
-    processTurn(playerAction) {
-        if (playerAction === '攻击' && this.playerA.dan < 1) {
-            playerAction = '防御';
+   <script>
+document.addEventListener("DOMContentLoaded", function () {
+    class DanDuel {
+        constructor() {
+            this.scores = JSON.parse(localStorage.getItem('danScores')) || { A: 0, B: 0 };
+            this.reset();
         }
 
-        const botAction = this.getBotAction();
-        this.processActions(playerAction, botAction);
-        this.showLatestAction(playerAction, botAction);
+        reset() {
+            this.playerA = { dan: 0 };
+            this.playerB = { dan: 0 };
+            this.round = 1;
+            this.clearActions();
+            this.updateDisplay();
+        }
 
-        const result = this.checkResult(playerAction, botAction);
-        if (result) this.handleResult(result);
+        getBotAction() {
+            const botDan = this.playerB.dan;
+            const playerDan = this.playerA.dan;
+            
+            // AI策略核心
+            if (playerDan === 0 && botDan > 0) {
+                return this.weightedChoice({ '攻击': 80, '集丹': 20 });
+            }
+            if (playerDan === 1 && botDan > 0) {
+                return this.weightedChoice({ '攻击': 70, '防御': 30 });
+            }
+            if (botDan >= 3) {
+                return this.weightedChoice({ '攻击': 60, '集丹': 40 });
+            }
+            if (botDan === 0) {
+                return this.weightedChoice({ '集丹': 90, '防御': 10 });
+            }
+            return this.weightedChoice({ '攻击': 50, '集丹': 30, '防御': 20 });
+        }
 
-        this.round++;
-        this.updateDisplay();
+        weightedChoice(weights) {
+            const total = Object.values(weights).reduce((a, b) => a + b, 0);
+            let random = Math.random() * total;
+            for (const [action, weight] of Object.entries(weights)) {
+                if (random < weight) return action;
+                random -= weight;
+            }
+            return '防御';
+        }
+
+        processTurn(playerAction) {
+            // 验证玩家动作
+            if (playerAction === '攻击' && this.playerA.dan < 1) {
+                playerAction = '防御';
+            }
+
+            // AI决策
+            const botAction = this.getBotAction();
+            
+            // 处理动作
+            this.processActions(playerAction, botAction);
+            
+            // 显示动作
+            this.showLatestAction(playerAction, botAction);
+            
+            // 检查胜负
+            const result = this.checkResult(playerAction, botAction);
+            if (result) this.handleResult(result);
+
+            // 更新界面
+            this.round++;
+            this.updateDisplay();
+        }
+
+        processActions(playerAction, botAction) {
+            const process = (player, action) => {
+                if (action === '集丹') player.dan++;
+                if (action === '攻击' && player.dan > 0) player.dan--;
+            };
+
+            process(this.playerA, playerAction);
+            process(this.playerB, botAction);
+        }
+
+        checkResult(playerAction, botAction) {
+            if (playerAction === '攻击' && botAction === '集丹') return 'A';
+            if (botAction === '攻击' && playerAction === '集丹') return 'B';
+            return null;
+        }
+
+        handleResult(winner) {
+            this.scores[winner]++;
+            localStorage.setItem('danScores', JSON.stringify(this.scores));
+            setTimeout(() => {
+                alert(`${winner === 'A' ? '碳基人' : '硅基人'}获胜！`);
+                this.reset();
+            }, 100);
+        }
+
+        showLatestAction(playerAction, botAction) {
+            const actionColors = {
+                '集丹': 'var(--gather-color)',
+                '攻击': 'var(--attack-color)',
+                '防御': 'var(--defend-color)'
+            };
+
+            const playerActionElem = document.getElementById('playerAction');
+            const botActionElem = document.getElementById('botAction');
+            
+            playerActionElem.textContent = playerAction;
+            playerActionElem.style.color = actionColors[playerAction];
+            botActionElem.textContent = botAction;
+            botActionElem.style.color = actionColors[botAction];
+        }
+
+        clearActions() {
+            document.getElementById('playerAction').textContent = '-';
+            document.getElementById('botAction').textContent = '-';
+        }
+
+        updateDisplay() {
+            // 更新数值
+            document.getElementById('danA').textContent = this.playerA.dan;
+            document.getElementById('danB').textContent = this.playerB.dan;
+            
+            // 更新比分
+            document.getElementById('scoreA').textContent = this.scores.A;
+            document.getElementById('scoreB').textContent = this.scores.B;
+            
+            // 更新回合
+            document.getElementById('roundNumber').textContent = `第 ${this.round} 回合`;
+            
+            // 按钮状态
+            document.getElementById('attackBtn').disabled = this.playerA.dan < 1;
+        }
     }
 
-    processActions(playerAction, botAction) {
-        const process = (player, action) => {
-            if (action === '集丹') player.dan++;
-            if (action === '攻击' && player.dan > 0) player.dan--;
-        };
+    // 初始化游戏实例
+    const game = new DanDuel();
 
-        process(this.playerA, playerAction);
-        process(this.playerB, botAction);
-    }
+    // 事件绑定
+    document.getElementById('gatherBtn').addEventListener('click', () => game.processTurn('集丹'));
+    document.getElementById('attackBtn').addEventListener('click', () => game.processTurn('攻击'));
+    document.getElementById('defendBtn').addEventListener('click', () => game.processTurn('防御'));
+    
+    // 新游戏按钮
+    document.getElementById('newGameBtn').addEventListener('click', () => {
+        if (confirm('确定要重置所有比分吗？')) {
+            localStorage.removeItem('danScores');
+            game.scores = { A: 0, B: 0 };
+            game.reset();
+        }
+    });
 
-    checkResult(playerAction, botAction) {
-        if (playerAction === '攻击' && botAction === '集丹') return 'A';
-        if (botAction === '攻击' && playerAction === '集丹') return 'B';
-        return null;
-    }
-
-    handleResult(winner) {
-        this.scores[winner]++;
-        localStorage.setItem('danScores', JSON.stringify(this.scores));
-        setTimeout(() => {
-            alert(`${winner === 'A' ? '碳基人' : '硅基人'}获胜！`);            this.reset();
-        }, 100);
-    }
-
-    showLatestAction(playerAction, botAction) {
-        const actionColors = {
-            '集丹': 'var(--gather-color)',
-            '攻击': 'var(--attack-color)',
-            '防御': 'var(--defend-color)'
-        };
-
-        document.getElementById('playerAction').textContent = playerAction;
-        document.getElementById('playerAction').style.color = actionColors[playerAction];
-        document.getElementById('botAction').textContent = botAction;
-        document.getElementById('botAction').style.color = actionColors[botAction];
-    }
-
-    clearActions() {
-        document.getElementById('playerAction').textContent = '-';
-        document.getElementById('botAction').textContent = '-';
-    }
-
-    updateDisplay() {
-        // 更新数字显示
-        document.getElementById('danA').textContent = this.playerA.dan;
-        document.getElementById('danB').textContent = this.playerB.dan;
-        
-        // 更新比分
-        document.getElementById('scoreA').textContent = this.scores.A;
-        document.getElementById('scoreB').textContent = this.scores.B;
-        
-        // 更新回合数
-        document.getElementById('roundNumber').textContent = `第 ${this.round} 回合`;
-        
-        // 控制攻击按钮状态
-        document.getElementById('attackBtn').disabled = this.playerA.dan < 1;
-    }
-}
-
-// 初始化游戏实例
-const game = new DanDuel();
-
-// 事件绑定
-document.getElementById('gatherBtn').addEventListener('click', () => game.processTurn('集丹'));
-document.getElementById('attackBtn').addEventListener('click', () => game.processTurn('攻击'));
-document.getElementById('defendBtn').addEventListener('click', () => game.processTurn('防御'));
-
-// 全新开始按钮
-document.getElementById('newGameBtn').addEventListener('click', () => {
-    if (confirm('确定要重置所有比分吗？')) {
-        // 重置分数存储
-        localStorage.removeItem('danScores');
-        // 创建新游戏实例
-        game.scores = { A: 0, B: 0 };
-        game.reset();
-        // 更新显示
-        game.updateDisplay();
-    }
+    // 初始显示
+    game.updateDisplay();
 });
-
-// 初始显示
-game.updateDisplay();
+    </script>
+</body>
+</html>
