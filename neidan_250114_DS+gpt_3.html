@@ -1,0 +1,384 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>内丹对决（进阶版）</title>
+  <style>
+    :root {
+      --primary-font: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+      --carbon-color: #FF5722;
+      --silicon-color: #2196F3;
+      --gather-color: #4CAF50;
+      --attack-color: #E91E63;
+      --defend-color: #9C27B0;
+      --strong-color: #673AB7;
+      --heal-color: #009688;
+      --bg-color: #f5f5f5;
+    }
+    body {
+      font-family: var(--primary-font);
+      margin: 0;
+      padding: 20px;
+      background: var(--bg-color);
+      color: #333;
+    }
+    header {
+      text-align: center;
+      margin-bottom: 20px;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 2em;
+      color: var(--carbon-color);
+    }
+    header p {
+      margin: 5px 0 0;
+      font-size: 16px;
+      color: var(--silicon-color);
+    }
+    .rule-section {
+      background: #fff;
+      border-radius: 8px;
+      padding: 15px;
+      margin: 10px auto;
+      max-width: 600px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      font-size: 14px;
+      line-height: 1.6;
+    }
+    .rule-section p {
+      margin: 8px 0;
+    }
+    .status-panel {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      margin-bottom: 20px;
+    }
+    .player-card {
+      background: #fff;
+      border-radius: 8px;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      padding: 15px;
+      margin: 10px;
+      flex: 1 1 250px;
+      max-width: 300px;
+    }
+    .player-card h2 {
+      margin: 0;
+      font-size: 1.5em;
+    }
+    .player-card .info {
+      margin-top: 10px;
+      font-size: 16px;
+    }
+    .player-card .info span {
+      font-weight: bold;
+    }
+    #actionDisplay {
+      background: #fff;
+      border-radius: 8px;
+      padding: 20px;
+      text-align: center;
+      box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+      margin-bottom: 20px;
+    }
+    #actionDisplay .round-info {
+      font-size: 16px;
+      margin-bottom: 10px;
+      color: #666;
+    }
+    #actionDisplay .action-text {
+      display: flex;
+      justify-content: space-around;
+      flex-wrap: wrap;
+      font-size: 20px;
+    }
+    #actionDisplay .action-text span {
+      flex: 1 1 45%;
+      margin: 5px 0;
+    }
+    #actionPanel {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(100px, 1fr));
+      gap: 10px;
+      margin-bottom: 20px;
+    }
+    .action-btn {
+      padding: 12px;
+      border: none;
+      border-radius: 8px;
+      font-size: 16px;
+      font-weight: bold;
+      cursor: pointer;
+      transition: transform 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+    .action-btn:active {
+      transform: scale(0.95);
+    }
+    .gather-btn { background: var(--gather-color); color: #fff; }
+    .attack-btn { background: var(--attack-color); color: #fff; }
+    .defend-btn { background: var(--defend-color); color: #fff; }
+    .strong-btn { background: var(--strong-color); color: #fff; }
+    .heal-btn { background: var(--heal-color); color: #fff; }
+    #newGameBtn {
+      background: #607D8B;
+      color: #fff;
+      width: 100%;
+      padding: 15px;
+      border: none;
+      border-radius: 8px;
+      font-size: 18px;
+      font-weight: bold;
+      cursor: pointer;
+      margin-top: 10px;
+    }
+    .ripple {
+      position: absolute;
+      border-radius: 50%;
+      transform: scale(0);
+      animation: ripple 0.6s linear;
+      background: rgba(255,255,255,0.7);
+      pointer-events: none;
+    }
+    @keyframes ripple {
+      to {
+        transform: scale(4);
+        opacity: 0;
+      }
+    }
+    @media (max-width: 600px) {
+      #actionDisplay .action-text { font-size: 16px; }
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>内丹对决（进阶版）</h1>
+    <p>你是碳基生命，对战硅基智能</p>
+  </header>
+
+  <section class="rule-section">
+    <p><strong>规则说明：</strong></p>
+    <p>双方各有 3 滴血和 0 内丹。每回合同时选择一个操作：</p>
+    <p><strong>集丹：</strong>获得 1 颗内丹</p>
+    <p><strong>攻击：</strong>消耗 1 内丹；若对手选择【集丹】、【回血】或【强攻】，对方受 1 点伤害；双方同时攻击则互抵</p>
+    <p><strong>防御：</strong>抵消对手的【攻击】（不抵消【强攻】）</p>
+    <p><strong>强攻：</strong>消耗 3 内丹，无视防御；若对手【集丹】则造成 2 点伤害，其它情况造成 1 点伤害；若双方同时强攻则互抵</p>
+    <p><strong>回血：</strong>消耗 3 内丹，回合结束后回复 1 滴血</p>
+    <p>当一方血量降至 0 或以下时即告失败，系统自动重置并累计胜场。</p>
+  </section>
+
+  <div class="status-panel">
+    <div class="player-card">
+      <h2>碳基生命</h2>
+      <div class="info">内丹：<span id="danPlayer">0</span></div>
+      <div class="info">生命：<span id="healthPlayer">3</span></div>
+      <div class="info">胜场：<span id="scorePlayer">0</span></div>
+    </div>
+    <div class="player-card">
+      <h2>硅基智能</h2>
+      <div class="info">内丹：<span id="danAI">0</span></div>
+      <div class="info">生命：<span id="healthAI">3</span></div>
+      <div class="info">胜场：<span id="scoreAI">0</span></div>
+    </div>
+  </div>
+
+  <div id="actionDisplay">
+    <div class="round-info" id="roundNumber">第 1 回合</div>
+    <div class="action-text">
+      <span id="playerAction" style="color: var(--carbon-color)">-</span>
+      <span id="aiAction" style="color: var(--silicon-color)">-</span>
+    </div>
+  </div>
+
+  <div id="actionPanel">
+    <button class="action-btn gather-btn" id="gatherBtn">集丹</button>
+    <button class="action-btn attack-btn" id="attackBtn" disabled>攻击</button>
+    <button class="action-btn defend-btn" id="defendBtn">防御</button>
+    <button class="action-btn strong-btn" id="strongAttackBtn">强攻</button>
+    <button class="action-btn heal-btn" id="healBtn">回血</button>
+  </div>
+
+  <button id="newGameBtn">全新开始（重置胜场）</button>
+
+  <script>
+    const actionDisplayTemplate = `
+      <div class="round-info" id="roundNumber">第 1 回合</div>
+      <div class="action-text">
+        <span id="playerAction" style="color: var(--carbon-color)">-</span>
+        <span id="aiAction" style="color: var(--silicon-color)">-</span>
+      </div>
+    `;
+    class InnerDanDuel {
+      constructor() {
+        this.scores = JSON.parse(localStorage.getItem('innerDanScores')) || { player: 0, ai: 0 };
+        this.resetRound();
+      }
+      resetRound() {
+        this.player = { dan: 0, health: 3 };
+        this.ai = { dan: 0, health: 3 };
+        this.round = 1;
+        document.getElementById('actionDisplay').innerHTML = actionDisplayTemplate;
+        this.updateDisplay();
+      }
+      getAIDecision() {
+        if (this.ai.dan < 1) return '集丹';
+        let moves = {};
+        if (this.ai.dan >= 3) {
+          if (this.ai.health <= 1) {
+            moves["回血"] = 40;
+            moves["攻击"] = 20;
+            moves["防御"] = 20;
+            moves["强攻"] = 20;
+            moves["集丹"] = 0;
+          } else if (this.player.health <= 1) {
+            moves["强攻"] = 40;
+            moves["攻击"] = 30;
+            moves["防御"] = 10;
+            moves["集丹"] = 10;
+            moves["回血"] = 10;
+          } else {
+            moves["攻击"] = 30;
+            moves["集丹"] = 30;
+            moves["防御"] = 20;
+            moves["强攻"] = 10;
+            moves["回血"] = 10;
+          }
+        } else {
+          moves["攻击"] = 40;
+          moves["集丹"] = 40;
+          moves["防御"] = 20;
+          moves["强攻"] = 0;
+          moves["回血"] = 0;
+        }
+        // 加入随机扰动 -5 到 +5
+        for (let key in moves) {
+          moves[key] += Math.floor(Math.random() * 11) - 5;
+          if (moves[key] < 0) moves[key] = 0;
+        }
+        return this.weightedChoice(moves);
+      }
+      weightedChoice(choices) {
+        const total = Object.values(choices).reduce((a, b) => a + b, 0);
+        let rand = Math.random() * total;
+        for (const [action, weight] of Object.entries(choices)) {
+          if (rand < weight) return action;
+          rand -= weight;
+        }
+        return Object.keys(choices)[0];
+      }
+      processTurn(playerAction) {
+        if (playerAction === '攻击' && this.player.dan < 1) playerAction = '防御';
+        if ((playerAction === '强攻' || playerAction === '回血') && this.player.dan < 3) playerAction = '防御';
+        const aiAction = this.getAIDecision();
+        this.showLatestAction(playerAction, aiAction);
+        const updateDan = (entity, action) => {
+          if (action === '集丹') entity.dan++;
+          if (action === '攻击' && entity.dan > 0) entity.dan--;
+          if ((action === '强攻' || action === '回血') && entity.dan >= 3) entity.dan -= 3;
+        };
+        updateDan(this.player, playerAction);
+        updateDan(this.ai, aiAction);
+        const calcDamage = (attackerAction, defenderAction) => {
+          let dmg = 0;
+          if (attackerAction === '攻击') {
+            if (defenderAction !== '攻击' && defenderAction !== '防御' && defenderAction !== '强攻') {
+              dmg = 1;
+            }
+          } else if (attackerAction === '强攻') {
+            if (defenderAction === '强攻') {
+              dmg = 0;
+            } else if (defenderAction === '集丹') {
+              dmg = 2;
+            } else {
+              // 当对手采用攻击或回血时，只有强攻产生伤害，对手的攻击不反作用
+              dmg = 1;
+            }
+          }
+          return dmg;
+        };
+        const damageToPlayer = calcDamage(aiAction, playerAction);
+        const damageToAI = calcDamage(playerAction, aiAction);
+        this.player.health = this.player.health - damageToPlayer + (playerAction === '回血' ? 1 : 0);
+        this.ai.health = this.ai.health - damageToAI + (aiAction === '回血' ? 1 : 0);
+        if (this.player.health <= 0 || this.ai.health <= 0) {
+          const winner = this.player.health > 0 ? 'player' : 'ai';
+          this.handleResult(winner);
+          return;
+        }
+        this.round++;
+        this.updateDisplay();
+      }
+      handleResult(winner) {
+        if (winner === 'player') {
+          this.scores.player++;
+        } else if (winner === 'ai') {
+          this.scores.ai++;
+        }
+        localStorage.setItem('innerDanScores', JSON.stringify(this.scores));
+        const actionDisplay = document.getElementById('actionDisplay');
+        actionDisplay.style.background = winner === 'player' ? 'rgba(255, 87, 34, 0.3)' : 'rgba(33, 150, 243, 0.3)';
+        actionDisplay.style.transform = 'scale(1.05)';
+        setTimeout(() => {
+          const winnerText = winner === 'player' ? '碳基生命获胜！' : '硅基智能获胜！';
+          actionDisplay.innerHTML = `<div style="font-size:20px;font-weight:bold;color:${winner === 'player' ? 'var(--carbon-color)' : 'var(--silicon-color)'}">${winnerText}</div>`;
+          setTimeout(() => { this.resetRound(); }, 1000);
+        }, 300);
+      }
+      showLatestAction(playerAction, aiAction) {
+        const actionColors = {
+          '集丹': 'var(--gather-color)',
+          '攻击': 'var(--attack-color)',
+          '防御': 'var(--defend-color)',
+          '强攻': 'var(--strong-color)',
+          '回血': 'var(--heal-color)'
+        };
+        document.getElementById('playerAction').textContent = playerAction;
+        document.getElementById('playerAction').style.color = actionColors[playerAction] || '#000';
+        document.getElementById('aiAction').textContent = aiAction;
+        document.getElementById('aiAction').style.color = actionColors[aiAction] || '#000';
+      }
+      updateDisplay() {
+        document.getElementById('danPlayer').textContent = this.player.dan;
+        document.getElementById('danAI').textContent = this.ai.dan;
+        document.getElementById('healthPlayer').textContent = this.player.health;
+        document.getElementById('healthAI').textContent = this.ai.health;
+        document.getElementById('scorePlayer').textContent = this.scores.player;
+        document.getElementById('scoreAI').textContent = this.scores.ai;
+        document.getElementById('roundNumber').textContent = `第 ${this.round} 回合`;
+        document.getElementById('attackBtn').disabled = this.player.dan < 1;
+      }
+    }
+    const game = new InnerDanDuel();
+    document.querySelectorAll('.action-btn').forEach(btn => {
+      btn.addEventListener('click', function(e) {
+        const ripple = document.createElement('span');
+        ripple.className = 'ripple';
+        this.appendChild(ripple);
+        const rect = this.getBoundingClientRect();
+        ripple.style.width = ripple.style.height = Math.max(rect.width, rect.height) + 'px';
+        ripple.style.left = (e.clientX - rect.left - rect.width/2) + 'px';
+        ripple.style.top = (e.clientY - rect.top - rect.height/2) + 'px';
+        setTimeout(() => { ripple.remove(); }, 600);
+      });
+    });
+    document.getElementById('gatherBtn').addEventListener('click', () => game.processTurn('集丹'));
+    document.getElementById('attackBtn').addEventListener('click', () => game.processTurn('攻击'));
+    document.getElementById('defendBtn').addEventListener('click', () => game.processTurn('防御'));
+    document.getElementById('strongAttackBtn').addEventListener('click', () => game.processTurn('强攻'));
+    document.getElementById('healBtn').addEventListener('click', () => game.processTurn('回血'));
+    document.getElementById('newGameBtn').addEventListener('click', () => {
+      if (confirm('确定要重置所有胜场记录吗？')) {
+        localStorage.removeItem('innerDanScores');
+        game.scores = { player: 0, ai: 0 };
+        game.resetRound();
+        game.updateDisplay();
+      }
+    });
+  </script>
+</body>
+</html>
