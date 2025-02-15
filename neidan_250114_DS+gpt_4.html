@@ -410,7 +410,12 @@ if (this.player.dan === 0) {
     return '集丹'; // 优先积累内丹
   }
 
-  // 7. 默认情况下，AI 随机选择攻击、强攻、防御或集丹
+  // 7. 如果 玩家生命为1且丹不足3时，AI内丹大于等于3，必定选择强攻
+  if (this.player.health === 1 && this.player.dan < 3 && this.ai.dan >= 3) {
+    return '强攻'; // AI 强攻玩家
+  }
+
+  // 8. 默认情况下，AI 随机选择攻击、强攻、防御或集丹
   const randDecision = randomFactor;
   if (randDecision < 0.25) {
     return '攻击'; // 25% 攻击
