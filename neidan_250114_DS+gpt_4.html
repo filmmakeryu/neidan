@@ -50,12 +50,16 @@
     .rule-section p {
       margin: 4px 0;
     }
+    
     .status-panel {
       display: flex;
       justify-content: space-between;
-      flex-wrap: wrap;
+      flex-wrap: nowrap;
       margin-bottom: 20px;
       gap: 10px;
+      width: 100%; /* 确保容器宽度自适应 */
+
+      
     }
 
     .player-card {
@@ -65,10 +69,11 @@
       padding: 15px;
       margin: 10px;
       flex: 1 1 150px;
-      max-width: 200px;
+      max-width: 500px;
       text-align: center; /* 确保内容居中 */
       transition: background 0.3s;
     }
+    
 
     .player-card.carbon { background-color: rgba(255, 87, 34, 0.1); }
     .player-card.silicon { background-color: rgba(33, 150, 243, 0.1); }
@@ -259,11 +264,13 @@ button:disabled {
     <p>你是碳基生命，对战硅基智能</p>
   </header>
 
-  <section class="rule-section">
-    <p><strong>规则说明：</strong> 选择操作并与对方对决。<br>
-        【集丹】获得 1 颗内丹。  【攻击】消耗 1 颗内丹，对集丹或回血造成 1 点伤害，对攻击、防御或强攻不造成伤害。 【防御】抵御 1 点伤害。 
-        【强攻】消耗 3 颗内丹，对集丹或回血造成 2 点伤害，对防御和攻击造成 1 点伤害。 【回血】消耗 3 颗内丹，恢复 1 点生命
-      </section>
+  <div class="rule-section">
+    <p class="gather-rule">集丹：获得一颗内丹。</p>
+    <p class="attack-rule">攻击：消耗一颗内丹，对集丹或回血造成一点伤害，对攻击、防御或强攻不造成伤害。</p>
+    <p class="defend-rule">防御：抵消一点伤害。</p>
+    <p class="strong-attack-rule">强攻：消耗三颗内丹，对集丹或回血造成两点伤害，对防御和攻击造成一点伤害。</p>
+    <p class="heal-rule">回血：消耗三颗内丹，恢复一点生命。</p>
+  </div>
 
   <div class="status-panel">
     <div class="player-card carbon">
@@ -328,33 +335,95 @@ class InnerDanDuel {
     this.updateDisplay();
   }
 
+    
   getAIDecision() {
-    // 设定一个随机概率系数
-    const randomFactor = Math.random(); // 返回 0 到 1 之间的一个随机数
+  const randomFactor = Math.random(); // 获取一个 0 到 1 之间的随机数
 
-    // 如果 AI 生命值低于 2 且内丹大于等于 3，优先回血
-    if (this.ai.health < 2 && this.ai.dan >= 3) {
-      return randomFactor < 0.8 ? '回血' : '集丹';
+// 1. 如果 玩家丹量为0，优先选择攻击（50%）或集丹（50%）
+if (this.player.dan === 0) {
+  const randDecision = randomFactor;
+  if (randDecision < 0.5) {
+    // 只有在 AI 有足够的内丹时才允许攻击
+    if (this.ai.dan > 0) {
+      return '攻击'; // 50% 概率攻击
+    } else {
+      return '集丹'; // 如果内丹不足，就选择集丹
     }
-
-    // 如果 AI 内丹少于 1，优先选择集丹
-    if (this.ai.dan < 1) {
-      return randomFactor < 0.9 ? '集丹' : '攻击';
-    }
-
-    // 如果 AI 内丹大于等于 3，选择强攻或攻击，取决于随机性
-    if (this.ai.dan >= 3) {
-      // 如果 AI 血量较低，选择攻击的概率较大
-      if (this.ai.health < 2) {
-        return randomFactor < 0.6 ? '攻击' : '强攻'; // 60% 概率攻击，40% 强攻
-      } else {
-        return randomFactor < 0.5 ? '强攻' : '攻击'; // 50% 概率强攻或攻击
-      }
-    }
-
-    // 如果没有其他优先选择，AI 将随机选择集丹或攻击
-    return randomFactor < 0.5 ? '集丹' : '攻击'; // 50% 集丹，50% 攻击
+  } else {
+    return '集丹'; // 100% 概率集丹
   }
+}
+  
+  // 2. 如果 AI 血量低于 2 且内丹大于等于 3，优先回血
+  if (this.ai.health < 2 && this.ai.dan >= 3) {
+    // 高概率选择回血，但有一定的机会选择强攻、攻击或防御
+    if (randomFactor < 0.6) {
+      return '回血'; // 40% 概率回血
+    } else if (randomFactor < 0.8) {
+      return '强攻'; // 30% 概率强攻
+    } else if (randomFactor < 0.9) {
+      return '攻击'; // 20% 攻击
+    } else {
+      return '防御'; // 10% 防御
+    }
+  }
+
+  // 3. 如果 AI血量较低，优先选择防御（70%）或强攻（30%）
+  if (this.ai.dan >= 1 &&this.ai.health < 2) {
+    const randDecision = randomFactor;
+    if (randDecision < 0.7) {
+      return '防御'; // 70% 概率防御
+    } else if (randDecision < 0.7) {
+      return '集丹'; // 15% 概率集丹
+    } else {
+      return '攻击'; // 15% 概率攻击
+    }
+  }
+
+  // 4. 如果 AI 内丹大于等于 3 且血量较低，优先选择防御（70%）或强攻（30%）
+  if (this.ai.dan >= 3 && this.ai.health < 3) {
+    const randDecision = randomFactor;
+    if (randDecision < 0.7) {
+      return '防御'; // 70% 概率防御
+    } else if (randDecision < 0.9) {
+      return '强攻'; // 20% 概率强攻
+    } else {
+      return '回血'; // 10% 概率回血
+    }
+  }
+
+  // 5. 如果 AI 血量正常且内丹充足，选择攻击、强攻、集丹或防御
+  if (this.ai.dan >= 2) {
+    const randDecision = randomFactor;
+    if (randDecision < 0.4) {
+      // 强攻只有在内丹充足时才能选择
+      return this.ai.dan >= 3 ? '强攻' : '攻击'; // 确保内丹足够
+    } else if (randDecision < 0.7) {
+      return '攻击'; // 30% 攻击
+    } else if (randDecision < 0.85) {
+      return '防御'; // 15% 防御
+    } else {
+      return '集丹'; // 15% 集丹
+    }
+  }
+
+  // 6. 如果 AI 血量正常且内丹不足，优先选择集丹
+  if (this.ai.dan < 3) {
+    return '集丹'; // 优先积累内丹
+  }
+
+  // 7. 默认情况下，AI 随机选择攻击、强攻、防御或集丹
+  const randDecision = randomFactor;
+  if (randDecision < 0.25) {
+    return '攻击'; // 25% 攻击
+  } else if (randDecision < 0.5) {
+    return this.ai.dan >= 3 ? '强攻' : '攻击'; // 25% 强攻（确保内丹足够）
+  } else if (randDecision < 0.75) {
+    return '防御'; // 25% 防御
+  } else {
+    return '集丹'; // 25% 集丹
+  }
+}
 
   processTurn(playerAction) {
     if (playerAction === '攻击' && this.player.dan < 1) playerAction = '防御';
