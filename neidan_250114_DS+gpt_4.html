@@ -55,8 +55,8 @@
       display: flex;
       justify-content: space-between;
       flex-wrap: nowrap;
-      margin-bottom: 20px;
-      gap: 10px;
+      margin-bottom: 10px;
+      gap: 5px;
       width: 100%; /* 确保容器宽度自适应 */
 
       
@@ -67,7 +67,7 @@
       border-radius: 8px;
       box-shadow: 0 2px 8px rgba(0,0,0,0.1);
       padding: 15px;
-      margin: 10px;
+      margin: 5px;
       flex: 1 1 150px;
       max-width: 500px;
       text-align: center; /* 确保内容居中 */
@@ -113,7 +113,7 @@
       font-size: 18px;
       font-weight: bold;
       color: #333;
-      margin-bottom: 10px;
+      margin-bottom: 5px;
     }
 
 .victory-info {
@@ -142,8 +142,8 @@
     #actionPanel {
       display: flex;
       flex-direction: column; /* 面板纵向排列 */
-      gap: 30px;  /* 增加总间距，确保上下行之间有空隙 */
-      margin-bottom: 20px;
+      gap: 10px;  /* 增加总间距，确保上下行之间有空隙 */
+      margin-bottom: 10px;
     }
 
     .row {
@@ -265,11 +265,9 @@ button:disabled {
   </header>
 
   <div class="rule-section">
-    <p class="gather-rule">集丹：获得一颗内丹。</p>
-    <p class="attack-rule">攻击：消耗一颗内丹，对集丹或回血造成一点伤害，对攻击、防御或强攻不造成伤害。</p>
-    <p class="defend-rule">防御：抵消一点伤害。</p>
-    <p class="strong-attack-rule">强攻：消耗三颗内丹，对集丹或回血造成两点伤害，对防御和攻击造成一点伤害。</p>
-    <p class="heal-rule">回血：消耗三颗内丹，恢复一点生命。</p>
+    <p class="rule">【集丹：获得一颗内丹】   【攻击：消耗一颗内丹，对集丹或回血造成伤害，对攻击、防御或强攻无效】   【防御：不消耗内丹，抵御普通攻击】   【强攻：消耗三颗内丹，造成强大伤害，可以穿透防御和攻击】   【回血：消耗三颗内丹，恢复一点生命】</p>
+    <p class="attack-rule">游戏设计师 @搞电影的陈小雨</p>
+
   </div>
 
   <div class="status-panel">
